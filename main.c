@@ -6,66 +6,19 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <termios.h>
 #include <signal.h>
-#include <stdbool.h>
-#include <stdarg.h>
 
 #include "child_functions.h"
 
-struct termios saved_attributes;
-
-void termination_handler(int signum)
-{
-	if (signum == SIGTERM)
-	{
-		error_handler("sigterm");
-	}
-	if (signum == SIGINT)
-	{
-		error_handler("sigint");
-	}
-
-}
-
-bool child_cleanup(const int* pipe, int signum, int num_children, ...)
-{
-	system("stty sane");
-	write(*pipe, "\n", 1);
-	va_list pid_list;
-
-	va_start(pid_list, num_children);
-
-	pid_t pid;
-	for (size_t i = 0; i < num_children; i++)
-	{
-		pid = va_arg(pid_list, pid_t);
-		kill(pid, signum);
-	}
-	// kill parent?
-	kill(getpid(), signum);	
-	return true;
-}
-
 int main()
 {
-	//Set SIGTERM signal handler
-	signal(SIGTERM, termination_handler);
-	signal(SIGINT, termination_handler);	
-	// Enable raw input, disable normal keyboard input.
+	// Enable raw input
 	system("stty raw igncr -echo");
 	
 	// Number of child processes
 	const int NUM_CHILDREN = 2;
 	// Buffer for keyboard input
 	char c;
-
-	// Open keyboard as input
-	int kb;
-	if ((kb = open("/dev/tty1", O_RDONLY | O_NDELAY)) == -1) 
-	{
-		error_handler("Error while opening /dev/tty for input");
-	}
 	
 	int output_fd[2];
 	if ((pipe(output_fd)) == -1)
@@ -85,16 +38,18 @@ int main()
 		while (read(output_fd[0], &c, 1) > 0) 
 		{
 			write(1, &c, 1);	
-		}
-		
+		}	
 	}
 	else 
 	{
 		// in parent process
 		close(output_fd[0]);
 		size_t bufLoc = 0;
-		char buffer[1024];
+		const size_t BUFSIZE = 1024;
+		char buffer[BUFSIZE];
+		// to avoid compiler warnings
 		(void)buffer;
+		const char* bspace = "\b \b";
 
 		// Open pipe to translate process
 		int translate_pipe[2];
@@ -115,13 +70,10 @@ int main()
 			close(translate_pipe[1]);
 			while (read(translate_pipe[0], buffer, sizeof(buffer)) > 0)
 			{
-				size_t i = 0;
-				for (i = 0; i != strlen(buffer); i++)
-				{
-					if (buffer[i] == 'a')
-						buffer[i] = 'z';
-				}
+				translate(buffer, sizeof(buffer));
+				write(output_fd[1], "\n\r", 2);
 				write(output_fd[1], buffer, strlen(buffer));
+				write(output_fd[1], "\r", 1);
 			}
 		}
 		else
@@ -129,12 +81,12 @@ int main()
 			// in input process
 			close(translate_pipe[0]);
 			bool done = false;
+			size_t bsLen = strlen(bspace);
 			while (read(0, &c, 1) > 0 && !done) 
 			{
 				if (c == 'X') 
 				{
-					const char* bspace = "\b \b";
-					write(output_fd[1], bspace, strlen(bspace));
+					write(output_fd[1], bspace, bsLen);
 				}
 				else if (c == 'T')
 				{
@@ -142,7 +94,7 @@ int main()
 				}
 				else if (c == 'E') 
 				{
-					buffer[bufLoc] = '\0';
+					buffer[bufLoc] = '\n';
 					// Write buffer to translate process
 					write(translate_pipe[1], buffer, sizeof(buffer));
 					memset(buffer, '\0', sizeof(buffer));
@@ -151,6 +103,13 @@ int main()
 				else if (c == 'K')
 				{
 					// line kill
+					size_t i = 0;
+					while (buffer[i++] != '\n' && i < BUFSIZE)
+					{
+						write(output_fd[1], bspace, bsLen);
+					}
+					memset(buffer, '\0', sizeof(buffer));
+					bufLoc = 0;
 				}
 				else if (c == 11)
 				{
@@ -164,14 +123,7 @@ int main()
 			}
 		}
 	}
-	if (close(kb) == -1) 
-	{
-		error_handler("Error while closing /dev/tty");
-	}
-
 	// Reenable normal keyboard input.
-	// TODO: find out why each invocation of the program creates 3 stopped processes
-	//system("stty sane");
 	system("stty -raw -igncr echo");
 	return 0;
 }

@@ -10,6 +10,24 @@
 
 #include "child_functions.h"
 
+
+/**
+ * FUNCTION: main
+ *
+ * DATE: January 21, 2018
+ *
+ * DESIGNER: William Murphy
+ *
+ * PROGRAMMER: William Murphy
+ *
+ * INTERFACE: int main()
+ *
+ * RETURNS: int
+ * 
+ * NOTES:
+ * Main entry point of the program. Contains most of the program logic
+ * except for some helper functions in child_functions.h
+ */
 int main()
 {
 	// Enable raw input
@@ -104,9 +122,10 @@ int main()
 				{
 					// line kill
 					size_t i = 0;
-					while (buffer[i++] != '\n' && i < BUFSIZE)
+					while (buffer[i] != '\n' && buffer[i] != '\r' && i < BUFSIZE)
 					{
 						write(output_fd[1], bspace, bsLen);
+						i++;
 					}
 					memset(buffer, '\0', sizeof(buffer));
 					bufLoc = 0;

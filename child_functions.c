@@ -1,5 +1,21 @@
 #include "child_functions.h"
 
+/**
+ * FUNCTION: error_handler
+ *
+ * DATE: January 21, 2018
+ *
+ * DESIGNER: William Murphy
+ *
+ * PROGRAMMER: William Murphy
+ *
+ * INTERFACE: void error_handler(const char* err_msg)
+ *
+ * RETURNS: void
+ *
+ * NOTES:
+ * Handles errors raised during the program's execution.
+ */ 
 void error_handler(const char* err_msg)
 {
 	fprintf(stderr, "%s: %s\n", err_msg, strerror(errno));
@@ -7,7 +23,22 @@ void error_handler(const char* err_msg)
 	exit(EXIT_FAILURE);
 }
 
-
+/**
+ * FUNCTION: translate
+ *
+ * DATE: January 21, 2018
+ *
+ * DESIGNER: William Murphy
+ *
+ * PROGRAMMER: William Murphy
+ *
+ * INTERFACE: void translate(char* buffer, size_t bufsize)
+ *
+ * RETURNS: void
+ * 
+ * NOTES:
+ * Turns every 'a' in the buffer into a 'z'.
+ */
 void translate(char* buffer, size_t bufsize)
 {
 	size_t i = 0;
@@ -21,6 +52,23 @@ void translate(char* buffer, size_t bufsize)
 	buffer[i] = '\0';
 }
 
+/**
+ * FUNCTION: child_cleanup
+ *
+ * DATE: January 21, 2018
+ *
+ * DESIGNER: William Murphy
+ *
+ * PROGRAMMER: William Murphy
+ *
+ * INTERFACE: bool child_cleanup(const int* pipe, int signum, int num_children, ...)
+ *
+ * RETURNS: bool
+ * 
+ * NOTES:
+ * Cleans up after each child process. Can be used with a variable number
+ * of child processes as long as you know how many processes you want to kill.
+ */
 bool child_cleanup(const int* pipe, int signum, int num_children, ...)
 {
 	system("stty sane");
